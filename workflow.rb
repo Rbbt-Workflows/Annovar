@@ -7,10 +7,25 @@ Workflow.require_workflow "Sequence"
 
 module Annovar
   extend Workflow
-  Rbbt.claim Rbbt.share.software.annovar, :proc do
+  Rbbt.claim Rbbt.share.software[".source"]["annovar.tar.gz"], :proc do |filename|
+    raise "Please get Annovar from 'http://www.openbioinformatics.org/annovar/annovar_download_form.php' and place it here #{filename}"
   end
 
-  SOFTWARE_DIR=Rbbt.share.software.annovar.find
+  Rbbt.claim Rbbt.share.software.annovar, :proc do |dir|
+    dir = dir.find
+    tar = Rbbt.share.software[".source"]["annovar.tar.gz"].produce.find
+    Misc.in_dir(dir) do
+      CMD.cmd("tar xvfz '#{tar.find}'; mv annovar/* .;rmdir annovar")
+      CMD.cmd("./annotate_variation.pl --buildver hg19 --downdb ensGene '#{dir.humandb.find}'")
+      CMD.cmd("./annotate_variation.pl --buildver hg19 --downdb seq '#{dir.humandb.hg19_seq.find}'")
+      CMD.cmd("./retrieve_seq_from_fasta.pl '#{dir.humandb["hg19_ensGene.txt"]}' -seqdir '#{dir.humandb.hg19_seq.find}' -format ensGene -outfile '#{dir.humandb["hg19_ensGeneMrna.fa"]}'")
+      CMD.cmd("./annotate_variation.pl --buildver hg18 --downdb ensGene '#{dir.humandb.find}'")
+      CMD.cmd("./annotate_variation.pl --buildver hg18 --downdb seq '#{dir.humandb.hg18_seq.find}'")
+      CMD.cmd("./retrieve_seq_from_fasta.pl '#{dir.humandb["hg18_ensGene.txt"]}' -seqdir '#{dir.humandb.hg18_seq.find}' -format ensGene -outfile '#{dir.humandb["hg18_ensGeneMrna.fa"]}'")
+    end
+  end
+
+  SOFTWARE_DIR=Rbbt.share.software.annovar.produce.find
 
   dep Sequence, :reference
   task :prepare => :array do |mutations|
