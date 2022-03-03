@@ -1,7 +1,11 @@
 Annovar=/$PWD filter="*.rb *.R *.js *.sass *.haml *.tsv" {
  workflow.rb
  lib=lib {
-  annovar.rb
+  Annovar=Annovar{
+   tasks=tasks{
+    sample.rb
+   }
+  }
  }
  share=share{
   install=install filter="*"{

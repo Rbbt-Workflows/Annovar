@@ -37,15 +37,20 @@ module Annovar
     end
   end
 
-  dep :prepare
-  task :analysis => :tsv do 
+  input :annovar_vcf, :file, "VCF file to use for ANNOVAR analysis", nil, :nofile => true
+  dep :prepare do |jobname,options|
+    {:inputs => options} unless options[:annovar_vcf]
+  end
+  input :reference_build, :select, "Reference code", "b37", :select_options => %w(b37 hg38 mm10), :nofile => true
+  task :analysis => :tsv do |vcf_file,hg_build|
     script = SOFTWARE_DIR["annotate_variation.pl"].find
     db = SOFTWARE_DIR["humandb"].find
     log :annovar, "Running annovar script"
     out = file(:out)
     FileUtils.mkdir_p files_dir
     start = Time.now
-    `#{script} -out #{out} -build hg19 #{step(:prepare).join.path.find} #{db} -dbtype ensGene`
+    vcf_file = step(:prepare).join.path.find if vcf_file.nil?
+    CMD.cmd_log("#{script} -out #{out} -build #{hg_build} #{vcf_file} #{db} -dbtype ensGene")
     set_info :process_time, Time.now - start
     Open.read(file(:out). + '.exonic_variant_function')
   end
@@ -91,3 +96,5 @@ module Annovar
     Open.read(file(:out). + '.hg19_phastConsElements46way')
   end
 end
+
+require 'Annovar/tasks/sample' if defined? Sample
